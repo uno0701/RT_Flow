@@ -32,3 +32,10 @@ pub unsafe fn cstring_to_str(ptr: *const c_char) -> Result<String, String> {
         .map(|s| s.to_owned())
         .map_err(|e| format!("invalid UTF-8 in C string: {}", e))
 }
+
+/// Deserialize a JSON string into a value of type `T`.
+///
+/// Returns a descriptive error string on failure.
+pub fn deserialize_json<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, String> {
+    serde_json::from_str(json).map_err(|e| format!("JSON deserialization failed: {}", e))
+}

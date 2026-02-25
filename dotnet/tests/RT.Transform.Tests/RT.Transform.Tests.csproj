@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RT.Transform\RT.Transform.csproj" />
+    <ProjectReference Include="..\..\src\RT.Document\RT.Document.csproj" />
   </ItemGroup>
 
 </Project>

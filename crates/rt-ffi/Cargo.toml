@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 rt-core = { path = "../rt-core" }
@@ -14,3 +14,6 @@ rt-workflow = { path = "../rt-workflow" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+uuid = { workspace = true }
+rusqlite = { workspace = true }
+chrono = { workspace = true }

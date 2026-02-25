@@ -8,4 +8,8 @@
     <AssemblyName>RT.Transform</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\RT.Document\RT.Document.csproj" />
+  </ItemGroup>
+
 </Project>
