@@ -1,0 +1,16 @@
+[package]
+name = "rt-merge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rt-core = { path = "../rt-core" }
+rt-compare = { path = "../rt-compare" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

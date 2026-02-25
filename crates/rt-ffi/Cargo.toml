@@ -1,0 +1,16 @@
+[package]
+name = "rt-ffi"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+rt-core = { path = "../rt-core" }
+rt-compare = { path = "../rt-compare" }
+rt-merge = { path = "../rt-merge" }
+rt-workflow = { path = "../rt-workflow" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

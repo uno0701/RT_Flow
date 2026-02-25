@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rt-flow.internal/contracts/compare-result.json",
+  "title": "RT_Flow CompareResult",
+  "description": "Cross-language contract for the output produced by the rt-compare engine. Describes the full structural and textual diff between two documents (left = base, right = incoming). All field names are snake_case matching Rust serde output.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "left_doc_id",
+    "right_doc_id",
+    "elapsed_ms",
+    "stats",
+    "deltas"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "DeltaKind": {
+      "description": "Disposition of a single block after comparison.",
+      "type": "string",
+      "enum": [
+        "inserted",
+        "deleted",
+        "modified",
+        "moved"
+      ]
+    },
+    "TokenDiff": {
+      "description": "Token-level difference within a modified block.",
+      "type": "object",
+      "required": ["kind", "left_token", "right_token"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "Disposition of this token.",
+          "type": "string",
+          "enum": ["equal", "inserted", "deleted", "substituted"]
+        },
+        "left_token": {
+          "description": "Token from the left (base) block; null for pure insertions.",
+          "type": ["string", "null"]
+        },
+        "right_token": {
+          "description": "Token from the right (incoming) block; null for pure deletions.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "FormattingDiff": {
+      "description": "A single formatting attribute that changed between the left and right block.",
+      "type": "object",
+      "required": ["attribute", "left_value", "right_value"],
+      "additionalProperties": false,
+      "properties": {
+        "attribute": {
+          "description": "Name of the formatting attribute that changed (e.g. \"bold\", \"font_size\", \"style_name\").",
+          "type": "string"
+        },
+        "left_value": {
+          "description": "Attribute value in the left (base) block; null when absent.",
+          "type": ["string", "number", "boolean", "null"]
+        },
+        "right_value": {
+          "description": "Attribute value in the right (incoming) block; null when absent.",
+          "type": ["string", "number", "boolean", "null"]
+        }
+      }
+    },
+    "BlockDelta": {
+      "description": "Comparison result for one aligned pair (or singleton) of blocks across two documents.",
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "left_block_id",
+        "right_block_id",
+        "left_ordinal",
+        "right_ordinal",
+        "token_diffs",
+        "formatting_diffs",
+        "similarity_score",
+        "move_target_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable identifier for this delta record (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "description": "Disposition of this block pair.",
+          "$ref": "#/definitions/DeltaKind"
+        },
+        "left_block_id": {
+          "description": "UUID of the block in the left (base) document; null for inserted blocks.",
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "right_block_id": {
+          "description": "UUID of the block in the right (incoming) document; null for deleted blocks.",
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "left_ordinal": {
+          "description": "Zero-based position of this block in the left document's flat block list; null for inserted blocks.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "right_ordinal": {
+          "description": "Zero-based position of this block in the right document's flat block list; null for deleted blocks.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "token_diffs": {
+          "description": "Token-level diffs; empty for non-modified deltas.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/TokenDiff" }
+        },
+        "formatting_diffs": {
+          "description": "Formatting attribute diffs; empty when no formatting changed.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/FormattingDiff" }
+        },
+        "similarity_score": {
+          "description": "Normalised text similarity in [0.0, 1.0] between the two block versions; null for inserted or deleted blocks.",
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "move_target_id": {
+          "description": "For kind=moved: the UUID of the corresponding block in the target document that this block was matched to; null otherwise.",
+          "type": ["string", "null"],
+          "format": "uuid"
+        }
+      }
+    },
+    "CompareStats": {
+      "description": "Aggregate counts summarising the comparison run.",
+      "type": "object",
+      "required": [
+        "blocks_left",
+        "blocks_right",
+        "inserted",
+        "deleted",
+        "modified",
+        "moved",
+        "unchanged"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "blocks_left": {
+          "description": "Total number of blocks in the left (base) document.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocks_right": {
+          "description": "Total number of blocks in the right (incoming) document.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "inserted": {
+          "description": "Number of blocks present only in the right document.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted": {
+          "description": "Number of blocks present only in the left document.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "modified": {
+          "description": "Number of aligned block pairs where text or formatting changed.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "moved": {
+          "description": "Number of blocks whose structural position changed between documents.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "unchanged": {
+          "description": "Number of aligned block pairs that are identical in both documents.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "properties": {
+    "run_id": {
+      "description": "Stable unique identifier for this comparison run (UUIDv4).",
+      "type": "string",
+      "format": "uuid"
+    },
+    "left_doc_id": {
+      "description": "UUID of the left (base) document.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "right_doc_id": {
+      "description": "UUID of the right (incoming) document.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "elapsed_ms": {
+      "description": "Wall-clock duration of the comparison run in milliseconds.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "stats": {
+      "description": "Aggregate block-level counts for this comparison.",
+      "$ref": "#/definitions/CompareStats"
+    },
+    "deltas": {
+      "description": "Ordered list of per-block deltas in left-document traversal order.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/BlockDelta" }
+    }
+  }
+}

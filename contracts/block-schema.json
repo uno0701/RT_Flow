@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rt-flow.internal/contracts/block-schema.json",
+  "title": "RT_Flow Block Model",
+  "description": "Cross-language contract for the RT_Flow block document model. All field names are snake_case matching Rust serde output. Conforming implementations exist in Rust (rt-core), C# (dotnet/), and TypeScript (electron/src/shared/types/block.ts).",
+  "definitions": {
+    "BlockType": {
+      "description": "Structural role of a block within a legal document.",
+      "type": "string",
+      "enum": [
+        "section",
+        "clause",
+        "subclause",
+        "paragraph",
+        "table",
+        "table_row",
+        "table_cell"
+      ]
+    },
+    "TokenKind": {
+      "description": "Semantic category of a single token.",
+      "type": "string",
+      "enum": [
+        "word",
+        "number",
+        "punctuation",
+        "whitespace",
+        "defined_term",
+        "party_ref",
+        "date_ref"
+      ]
+    },
+    "ChangeType": {
+      "description": "Nature of a tracked revision.",
+      "type": "string",
+      "enum": [
+        "insert",
+        "delete",
+        "format_change"
+      ]
+    },
+    "DocumentType": {
+      "description": "Provenance classification of a document ingested into RT_Flow.",
+      "type": "string",
+      "enum": [
+        "original",
+        "redline",
+        "merged",
+        "snapshot"
+      ]
+    },
+    "Token": {
+      "description": "Atomic unit of text produced by the tokenizer. `offset` is the byte offset of the token's first character within the parent block's `canonical_text`.",
+      "type": "object",
+      "required": ["text", "kind", "normalized", "offset"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "description": "Raw text as it appears in the document.",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Semantic classification of this token.",
+          "$ref": "#/definitions/TokenKind"
+        },
+        "normalized": {
+          "description": "Lowercased, whitespace-normalised form used for matching and search.",
+          "type": "string"
+        },
+        "offset": {
+          "description": "Byte offset within the parent block's `canonical_text`.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "RunFormatting": {
+      "description": "Typographic attributes attached to a Run.",
+      "type": "object",
+      "required": ["bold", "italic", "underline", "strikethrough", "font_size", "color"],
+      "additionalProperties": false,
+      "properties": {
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "underline": {
+          "type": "boolean"
+        },
+        "strikethrough": {
+          "type": "boolean"
+        },
+        "font_size": {
+          "description": "Point size if explicitly set; null means inherit from style.",
+          "type": ["number", "null"]
+        },
+        "color": {
+          "description": "CSS-style hex colour string (e.g. \"#FF0000\") if explicitly set; null when not set.",
+          "type": ["string", "null"],
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        }
+      }
+    },
+    "Run": {
+      "description": "A contiguous span of text that shares a single set of formatting attributes. Analogous to a DOCX <w:r> element.",
+      "type": "object",
+      "required": ["text", "formatting"],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "formatting": {
+          "$ref": "#/definitions/RunFormatting"
+        }
+      }
+    },
+    "TrackedChange": {
+      "description": "A single tracked revision record attached to a block.",
+      "type": "object",
+      "required": ["author", "date", "change_type", "original"],
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "description": "Display name of the author who made this change.",
+          "type": "string"
+        },
+        "date": {
+          "description": "ISO 8601 UTC timestamp when the change was recorded.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "change_type": {
+          "description": "Whether content was inserted, deleted, or only reformatted.",
+          "$ref": "#/definitions/ChangeType"
+        },
+        "original": {
+          "description": "Original text before the change (for delete and format_change); null for pure insertions.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "FormattingMeta": {
+      "description": "Document-level and paragraph-level formatting metadata. Stored as a JSON blob in the database; not used for hashing.",
+      "type": "object",
+      "required": ["style_name", "numbering_id", "numbering_level", "is_redline", "tracked_change"],
+      "additionalProperties": false,
+      "properties": {
+        "style_name": {
+          "description": "Named paragraph/character style (e.g. \"Heading 1\", \"Body Text\"); null when not set.",
+          "type": ["string", "null"]
+        },
+        "numbering_id": {
+          "description": "Word-processor list numbering identifier; null when not a list item.",
+          "type": ["integer", "null"]
+        },
+        "numbering_level": {
+          "description": "Nesting depth within the numbering scheme (0-based); null when not a list item.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "is_redline": {
+          "description": "true when this block carries redline (tracked-changes) markup.",
+          "type": "boolean"
+        },
+        "tracked_change": {
+          "description": "The specific tracked-change record if present; null otherwise.",
+          "oneOf": [
+            { "$ref": "#/definitions/TrackedChange" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "Block": {
+      "description": "Core structural unit of the RT_Flow document model. Blocks form a tree: each Block may own zero or more child Blocks in `children`. The `parent_id` field mirrors the tree relationship via UUIDs so that a flat list can be reconstituted into a tree without carrying nested objects.",
+      "type": "object",
+      "required": [
+        "id",
+        "document_id",
+        "parent_id",
+        "block_type",
+        "level",
+        "structural_path",
+        "anchor_signature",
+        "clause_hash",
+        "canonical_text",
+        "display_text",
+        "formatting_meta",
+        "position_index",
+        "tokens",
+        "runs",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable unique identifier (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "document_id": {
+          "description": "Identifier of the owning Document (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "parent_id": {
+          "description": "Identifier of the parent block; null for root blocks.",
+          "type": ["string", "null"],
+          "format": "uuid"
+        },
+        "block_type": {
+          "description": "Structural role within the document.",
+          "$ref": "#/definitions/BlockType"
+        },
+        "level": {
+          "description": "Nesting depth (root = 0).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "structural_path": {
+          "description": "Human-readable structural address, e.g. \"1.2(a)(iii)\". Used as part of anchor signature computation.",
+          "type": "string"
+        },
+        "anchor_signature": {
+          "description": "SHA-256-based primary anchor: stable identity key for comparison and merging. Computed from block_type, structural_path, and the first 128 characters of canonical_text. 64-character lowercase hex string.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "clause_hash": {
+          "description": "SHA-256 of canonical_text — detects any textual change in the block. 64-character lowercase hex string.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "canonical_text": {
+          "description": "Whitespace-normalised text used for hashing and diffing.",
+          "type": "string"
+        },
+        "display_text": {
+          "description": "Original text preserving typographic fidelity (capitalisation, non-breaking spaces, special characters, etc.).",
+          "type": "string"
+        },
+        "formatting_meta": {
+          "description": "Paragraph/character formatting metadata; not used for hashing.",
+          "$ref": "#/definitions/FormattingMeta"
+        },
+        "position_index": {
+          "description": "Zero-based insertion order among siblings with the same parent_id.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokens": {
+          "description": "Token stream derived from canonical_text.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Token" }
+        },
+        "runs": {
+          "description": "Run stream derived from display_text (preserves formatting spans).",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Run" }
+        },
+        "children": {
+          "description": "Direct children in document order.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/Block" }
+        }
+      }
+    },
+    "Document": {
+      "description": "Top-level document record — the root of the block tree.",
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "source_path",
+        "doc_type",
+        "schema_version",
+        "normalization_version",
+        "hash_contract_version",
+        "ingested_at",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable UUID for this document (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "description": "Human-readable document name (e.g. filename without extension).",
+          "type": "string"
+        },
+        "source_path": {
+          "description": "Filesystem or object-storage path from which this document was ingested; null for programmatically created documents.",
+          "type": ["string", "null"]
+        },
+        "doc_type": {
+          "description": "Provenance classification of this document.",
+          "$ref": "#/definitions/DocumentType"
+        },
+        "schema_version": {
+          "description": "Semver string identifying the block-model schema (e.g. \"1.0.0\").",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "normalization_version": {
+          "description": "Semver string identifying the text-normalization algorithm.",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "hash_contract_version": {
+          "description": "Semver string identifying the clause-hashing contract.",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "ingested_at": {
+          "description": "ISO 8601 UTC timestamp when the document was ingested.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "metadata": {
+          "description": "Arbitrary key/value metadata (e.g. parties, jurisdiction, matter ID); null when no metadata was supplied at ingestion time.",
+          "type": ["object", "null"],
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "type": "array",
+  "items": { "$ref": "#/definitions/Block" }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rt-flow.internal/contracts/workflow-events.json",
+  "title": "RT_Flow WorkflowEvent and WorkflowState",
+  "description": "Cross-language contract for workflow lifecycle events and state snapshots in RT_Flow. WorkflowEvent records individual state-machine transitions; WorkflowState is a point-in-time snapshot of a workflow instance. All field names are snake_case matching Rust serde output.",
+  "definitions": {
+    "WorkflowStateEnum": {
+      "description": "High-level lifecycle stage of a workflow instance.",
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "COMPARE_RUNNING",
+        "FLOW_CREATED",
+        "IN_REVIEW",
+        "REVIEW_CLOSED",
+        "COMPILING_EDITS",
+        "READY_FOR_FINALIZATION",
+        "COMPLETED",
+        "ABORTED"
+      ]
+    },
+    "WorkflowEvent": {
+      "description": "A single immutable event that advances the workflow state machine. Events are append-only; the current state is derived by replaying the event log.",
+      "type": "object",
+      "required": [
+        "id",
+        "workflow_id",
+        "event_type",
+        "actor",
+        "payload",
+        "created_at",
+        "seq"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable unique identifier for this event record (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "workflow_id": {
+          "description": "UUID of the workflow instance this event belongs to.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "event_type": {
+          "description": "Discriminant identifying the event variant (e.g. \"submit_for_review\", \"approve\", \"request_changes\", \"abort\").",
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "description": "UUID of the user or system principal who triggered this event.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "payload": {
+          "description": "Arbitrary event-specific data. Structure is defined per event_type; consumers must tolerate unknown keys for forward compatibility.",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "created_at": {
+          "description": "ISO 8601 UTC timestamp when this event was recorded.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "seq": {
+          "description": "Monotonically increasing sequence number within the workflow. Used to detect ordering violations and support optimistic concurrency. Starts at 1.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "WorkflowState": {
+      "description": "Point-in-time snapshot of a workflow instance's current state, derived from its event log.",
+      "type": "object",
+      "required": [
+        "id",
+        "document_id",
+        "state",
+        "initiator_id",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable UUID for this workflow instance (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "document_id": {
+          "description": "UUID of the document that this workflow instance governs.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "state": {
+          "description": "Current lifecycle stage of this workflow instance.",
+          "$ref": "#/definitions/WorkflowStateEnum"
+        },
+        "initiator_id": {
+          "description": "UUID of the user who created and initiated this workflow.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "created_at": {
+          "description": "ISO 8601 UTC timestamp when the workflow was first created.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "description": "ISO 8601 UTC timestamp of the most recent state transition.",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/WorkflowEvent" },
+    { "$ref": "#/definitions/WorkflowState" }
+  ]
+}

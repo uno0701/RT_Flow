@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rt-flow.internal/contracts/merge-result.json",
+  "title": "RT_Flow MergeResult",
+  "description": "Cross-language contract for the output produced by the rt-merge engine. Describes the outcome of a three-way merge between a base document and an incoming document, producing an output document. All field names are snake_case matching Rust serde output.",
+  "type": "object",
+  "required": [
+    "merge_id",
+    "base_doc_id",
+    "incoming_doc_id",
+    "output_doc_id",
+    "conflicts",
+    "auto_resolved",
+    "pending_review"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "ConflictType": {
+      "description": "Category of merge conflict.",
+      "type": "string",
+      "enum": [
+        "content_overlap",
+        "move_collision",
+        "delete_modify"
+      ]
+    },
+    "ConflictResolution": {
+      "description": "Current resolution state of a conflict.",
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted_base",
+        "accepted_incoming",
+        "manual"
+      ]
+    },
+    "MergeConflict": {
+      "description": "A single merge conflict requiring human or automated resolution.",
+      "type": "object",
+      "required": [
+        "id",
+        "block_id",
+        "conflict_type",
+        "base_content",
+        "incoming_content",
+        "resolution"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable unique identifier for this conflict record (UUIDv4).",
+          "type": "string",
+          "format": "uuid"
+        },
+        "block_id": {
+          "description": "UUID of the block (from the output document) where the conflict originated.",
+          "type": "string",
+          "format": "uuid"
+        },
+        "conflict_type": {
+          "description": "Category describing how the conflict arose.",
+          "$ref": "#/definitions/ConflictType"
+        },
+        "base_content": {
+          "description": "Canonical text of the conflicting block as it appears in the base document; null when the block does not exist in the base (e.g. delete_modify where base deleted the block).",
+          "type": ["string", "null"]
+        },
+        "incoming_content": {
+          "description": "Canonical text of the conflicting block as it appears in the incoming document; null when the block does not exist in the incoming document.",
+          "type": ["string", "null"]
+        },
+        "resolution": {
+          "description": "Current resolution state of this conflict.",
+          "$ref": "#/definitions/ConflictResolution"
+        }
+      }
+    }
+  },
+  "properties": {
+    "merge_id": {
+      "description": "Stable unique identifier for this merge run (UUIDv4).",
+      "type": "string",
+      "format": "uuid"
+    },
+    "base_doc_id": {
+      "description": "UUID of the base (original) document.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "incoming_doc_id": {
+      "description": "UUID of the incoming (redlined / modified) document.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "output_doc_id": {
+      "description": "UUID of the newly created merged output document.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "conflicts": {
+      "description": "All conflicts detected during the merge, including both resolved and unresolved items.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/MergeConflict" }
+    },
+    "auto_resolved": {
+      "description": "Number of blocks that were merged without conflict or were automatically resolved.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "pending_review": {
+      "description": "Number of conflicts still in the pending resolution state that require human review.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

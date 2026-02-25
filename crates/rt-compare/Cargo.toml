@@ -1,0 +1,16 @@
+[package]
+name = "rt-compare"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rt-core = { path = "../rt-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+rayon = { workspace = true }
+similar = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
